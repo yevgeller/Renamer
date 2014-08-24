@@ -22,7 +22,6 @@ namespace RenamerUtility
     /// </summary>
     public partial class MainWindow : Window
     {
-
         string OLD_NEW_NAME_SEPARATOR = "//";
         public MainWindow()
         {
