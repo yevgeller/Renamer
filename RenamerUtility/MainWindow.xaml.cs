@@ -14,6 +14,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Forms;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace RenamerUtility
 {
@@ -52,7 +53,16 @@ namespace RenamerUtility
                 foreach (FileInfo f in fi)
                 {
                     string oldName = f.Name;
-                    string newName = f.Name.Replace(replaceWhat.Text, replaceWith.Text);
+                    string newName = f.Name;
+                    if(useRegex.IsChecked == true)
+                    {
+                        
+                        Regex rgx = new Regex(regexPattern.Text);
+                        newName = rgx.Replace(replaceWhat.Text, replaceWith.Text);
+                    }
+                    else
+                        newName = f.Name.Replace(replaceWhat.Text, replaceWith.Text);
+
                     if (oldName.CompareTo(newName) != 0)
                     {
                         File.Move(oldName, newName);
@@ -68,7 +78,14 @@ namespace RenamerUtility
                     foreach (DirectoryInfo dinfo in dii)
                     {
                         string oldName = dinfo.Name;
-                        string newName = dinfo.Name.Replace(replaceWhat.Text, replaceWith.Text);
+                        string newName = dinfo.Name;
+                        if(useRegex.IsChecked == true)
+                        {
+                            Regex rgx = new Regex(regexPattern.Text);
+                            newName = rgx.Replace(replaceWhat.Text, replaceWith.Text);
+                        }
+                        else
+                            newName = dinfo.Name.Replace(replaceWhat.Text, replaceWith.Text);
                         if (oldName.CompareTo(newName) != 0)
                         {
                             Directory.Move(oldName, newName);
@@ -102,7 +119,18 @@ namespace RenamerUtility
                 foreach (FileInfo f in fi)
                 {
                     string oldName = f.Name;
-                    string newName = f.Name.Replace(replaceWhat.Text, replaceWith.Text);
+                    string newName = f.Name;
+                    if(useRegex.IsChecked == true)
+                    {
+                        if (Regex.IsMatch(oldName, regexPattern.Text))
+                        {
+                            Regex rgx = new Regex(regexPattern.Text);
+                            newName = rgx.Replace(oldName, replaceWith.Text);
+                        }
+                    }
+                    else
+                        newName = f.Name.Replace(replaceWhat.Text, replaceWith.Text);
+
                     if (oldName.CompareTo(newName) != 0)
                     {
                         filesToBeChanged.Add(oldName + OLD_NEW_NAME_SEPARATOR + newName);
@@ -115,7 +143,18 @@ namespace RenamerUtility
                     foreach (DirectoryInfo dinfo in dii)
                     {
                         string oldName = dinfo.Name;
-                        string newName = dinfo.Name.Replace(replaceWhat.Text, replaceWith.Text);
+                        string newName = dinfo.Name;
+                        if (useRegex.IsChecked == true)
+                        {
+                            if (Regex.IsMatch(oldName, regexPattern.Text))
+                            {
+                                Regex rgx = new Regex(regexPattern.Text);
+                                newName = rgx.Replace(oldName, replaceWith.Text);
+                            }
+                        }
+                        else
+                            newName = dinfo.Name.Replace(replaceWhat.Text, replaceWith.Text);
+                        
                         if (oldName.CompareTo(newName) != 0)
                         {
                             foldersToBeChanged.Add(oldName + OLD_NEW_NAME_SEPARATOR + newName);
@@ -149,6 +188,7 @@ namespace RenamerUtility
         {
             replaceWhat.Text = string.Empty;
             replaceWith.Text = string.Empty;
+            regexPattern.Text = string.Empty;
             folderSelection.Text = string.Empty;
             includeDirectories.IsChecked = false;
         }
