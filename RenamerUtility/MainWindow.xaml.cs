@@ -56,9 +56,11 @@ namespace RenamerUtility
                     string newName = f.Name;
                     if(useRegex.IsChecked == true)
                     {
-                        
-                        Regex rgx = new Regex(regexPattern.Text);
-                        newName = rgx.Replace(replaceWhat.Text, replaceWith.Text);
+                        if (Regex.IsMatch(oldName, regexPattern.Text))
+                        {
+                            Regex rgx = new Regex(regexPattern.Text);
+                            newName = rgx.Replace(oldName, replaceWith.Text);
+                        }
                     }
                     else
                         newName = f.Name.Replace(replaceWhat.Text, replaceWith.Text);
@@ -81,8 +83,11 @@ namespace RenamerUtility
                         string newName = dinfo.Name;
                         if(useRegex.IsChecked == true)
                         {
-                            Regex rgx = new Regex(regexPattern.Text);
-                            newName = rgx.Replace(replaceWhat.Text, replaceWith.Text);
+                            if (Regex.IsMatch(oldName, regexPattern.Text))
+                            {
+                                Regex rgx = new Regex(regexPattern.Text);
+                                newName = rgx.Replace(oldName, replaceWith.Text);
+                            }
                         }
                         else
                             newName = dinfo.Name.Replace(replaceWhat.Text, replaceWith.Text);
