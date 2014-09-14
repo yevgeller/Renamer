@@ -47,9 +47,16 @@
                 </Grid.ColumnDefinitions>
                 <CheckBox x:Name="includeFiles" Content="Include Files" IsChecked="{Binding IncludeFiles}" Margin="3" Grid.Row="0" />
                 <CheckBox x:Name="includeDirectories" Content="Include Directories" IsChecked="{Binding IncludeDirectories}" Margin="3" Grid.Row="1" />
-                <CheckBox x:Name="useRegex" Content="Use regular expressions" IsChecked="{Binding UseRegularExpressions}" Margin="3,6,6,3" Grid.Row="2" />
-                <TextBox x:Name="regexPattern" Grid.Column="1" Grid.Row="2" Margin="3" Text="{Binding RegexPattern}" Visibility="{Binding UseRegularExpressions, Converter={StaticResource boolToVisConverter}}" />
-
+                <CheckBox x:Name="useRegex" Content="Use regular expressions" IsChecked="{Binding UseRegularExpressions}" Margin="3" Grid.Row="2" VerticalAlignment="Center" />
+                <Grid Grid.Column="1" Grid.Row="2" 
+                            Visibility="{Binding UseRegularExpressions, Converter={StaticResource boolToVisConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Label Content="Pattern: " Margin="3" />
+                <TextBox x:Name="regexPattern" Text="{Binding RegexPattern}" Margin="3" Grid.Column="1" />
+                </Grid>
             </Grid>
             <ScrollViewer Grid.Row="6" Grid.ColumnSpan="2">
                 <Label x:Name="results" Content="{Binding Results}" />
