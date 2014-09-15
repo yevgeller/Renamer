@@ -19,7 +19,7 @@ namespace RenamerUtility
             InitProperties();
         }
 
-        public List<ItemForRenaming> GetItemsToBeRenamed(FileInfo[] fi, DirectoryInfo[] di)
+        public void GetItemsToBeRenamed(FileInfo[] fi, DirectoryInfo[] di)
         {
             List<ItemForRenaming> ret = new List<ItemForRenaming>();
             if (FolderSelection != null)
@@ -73,8 +73,26 @@ namespace RenamerUtility
                     }
                 }
             }
-            //TODO: check for duplicates here
-            return ret;
+
+            CheckForNamesResultingInDuplicatesAndSetProperties(ret);
+            
+        }
+
+        private void CheckForNamesResultingInDuplicatesAndSetProperties(List<ItemForRenaming> src)
+        {
+            //TODO: check for duplicates here with ENTIRE folder
+            List<ItemForRenaming> duplicates = src.GroupBy(x => x.NewName)
+                .Where(a => a.Skip(1).Any())
+                .SelectMany(x => x)
+                .ToList<ItemForRenaming>();
+
+            if(duplicates.Any())
+            {
+                foreach(ItemForRenaming i in duplicates)
+                {
+                    src.RemoveAll(x => x.Equals(i));
+                }
+            }
         }
 
         private void PreviewAndOrRename(bool rename)
@@ -85,12 +103,12 @@ namespace RenamerUtility
                 Directory.SetCurrentDirectory(FolderSelection);
                 FileInfo[] fi = di.GetFiles();
                 DirectoryInfo[] dii = di.GetDirectories();
-                List<ItemForRenaming> items = this.GetItemsToBeRenamed(fi, dii);
+                this.GetItemsToBeRenamed(fi, dii);
                 if (rename)
                 {
-                    RenameItems(items);
+                    RenameItems(ItemsThatCanBeRenamed);
                 }
-                ProvideResultsFeedback(items);
+                ProvideResultsFeedback();
 
             }
             else
@@ -106,13 +124,24 @@ namespace RenamerUtility
             }
         }
 
-        private void ProvideResultsFeedback(List<ItemForRenaming> items)
+        private void ProvideResultsFeedback()
         {
             StringBuilder sb = new StringBuilder();
-            foreach (ItemForRenaming i in items)
+            foreach (ItemForRenaming i in ItemsThatCanBeRenamed)
             {
                 sb.Append(i.ToString());
                 sb.Append(Environment.NewLine);
+            }
+            if (this.ItemsThatCANNOTBeRenamed.Any())
+            {
+                sb.Append(Environment.NewLine);
+                sb.Append(Environment.NewLine);
+                sb.Append("--- The following items could not be renamed as the renaming would result in duplicate names:");
+                foreach (ItemForRenaming i in ItemsThatCANNOTBeRenamed)
+                {
+                    sb.Append(i.ToString());
+                    sb.Append(Environment.NewLine);
+                }
             }
             this.Results = sb.ToString();
         }

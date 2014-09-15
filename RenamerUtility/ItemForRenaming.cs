@@ -18,5 +18,16 @@ namespace RenamerUtility
             ret += this.OldName + " -> " + this.NewName;
             return ret;
         }
+
+        public override bool Equals(object obj)
+        {
+            ItemForRenaming input = obj as ItemForRenaming;
+            if (input == null)
+                return false;
+
+            return input.NewName == this.NewName &&
+                input.OldName == this.OldName &&
+                input.IsFile == this.IsFile;
+        }
     }
 }
