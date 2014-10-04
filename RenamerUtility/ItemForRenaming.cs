@@ -29,5 +29,14 @@ namespace RenamerUtility
                 input.OldName == this.OldName &&
                 input.IsFile == this.IsFile;
         }
+
+        public bool NeedsRenaming()
+        {
+            int result = String.Compare(this.OldName, this.NewName, true);
+            
+            if (result == 0) return false;
+            
+            return true;
+        }
     }
 }

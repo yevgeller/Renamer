@@ -19,6 +19,25 @@ namespace RenamerUtility
             InitProperties();
         }
 
+        private void PreviewAndOrRename(bool rename)
+        {
+            DirectoryInfo di = new DirectoryInfo(FolderSelection);
+            if (di != null)
+            {
+                Directory.SetCurrentDirectory(FolderSelection);
+                FileInfo[] fi = di.GetFiles();
+                DirectoryInfo[] dii = di.GetDirectories();
+                this.GetItemsToBeRenamed(fi, dii);
+                if (rename)
+                {
+                    RenameItems();
+                }
+                ProvideResultsFeedback();
+            }
+            else
+                Results = "Cannot find path.";
+        }
+
         public void GetItemsToBeRenamed(FileInfo[] fi, DirectoryInfo[] di)
         {
             List<ItemForRenaming> ret = new List<ItemForRenaming>();
@@ -30,46 +49,38 @@ namespace RenamerUtility
                 {
                     foreach (FileInfo f in fi)
                     {
-                        string oldName = f.Name;
-                        string newName = f.Name;
+                        ItemForRenaming ifr = new ItemForRenaming { NewName = f.Name, OldName = f.Name, IsFile = true };
                         if (UseRegularExpressions)
                         {
-                            if (Regex.IsMatch(oldName, RegexPattern))
+                            if (Regex.IsMatch(ifr.OldName, RegexPattern))
                             {
                                 Regex rgx = new Regex(RegexPattern);
-                                newName = rgx.Replace(oldName, ReplaceWith);
+                                ifr.NewName = rgx.Replace(ifr.OldName, ReplaceWith);
                             }
                         }
                         else
-                            newName = f.Name.Replace(ReplaceWhat, ReplaceWith);
+                            ifr.NewName = f.Name.Replace(ReplaceWhat, ReplaceWith);
 
-                        if (oldName.CompareTo(newName) != 0)
-                        {
-                            ret.Add(new ItemForRenaming { OldName = oldName, NewName = newName, IsFile = true });
-                        }
+                        ret.Add(ifr);
                     }
                 }
                 if (di.Length > 0 && IncludeDirectories)
                 {
                     foreach (DirectoryInfo dinfo in di)
                     {
-                        string oldName = dinfo.Name;
-                        string newName = dinfo.Name;
+                        ItemForRenaming ifr = new ItemForRenaming { NewName = dinfo.Name, OldName = dinfo.Name, IsFile = false };
                         if (UseRegularExpressions)
                         {
-                            if (Regex.IsMatch(oldName, RegexPattern))
+                            if (Regex.IsMatch(ifr.OldName, RegexPattern))
                             {
                                 Regex rgx = new Regex(RegexPattern);
-                                newName = rgx.Replace(oldName, ReplaceWith);
+                                ifr.NewName = rgx.Replace(ifr.OldName, ReplaceWith);
                             }
                         }
                         else
-                            newName = dinfo.Name.Replace(ReplaceWhat, ReplaceWith);
+                            ifr.NewName = dinfo.Name.Replace(ReplaceWhat, ReplaceWith);
 
-                        if (oldName.CompareTo(newName) != 0)
-                        {
-                            ret.Add(new ItemForRenaming { OldName = oldName, NewName = newName, IsFile = false });
-                        }
+                        ret.Add(ifr);
                     }
                 }
             }
@@ -93,34 +104,20 @@ namespace RenamerUtility
                     src.RemoveAll(x => x.Equals(i));
                 }
             }
+
+            ItemsThatCanBeRenamed = src;
+            ItemsThatCANNOTBeRenamed = duplicates;
         }
 
-        private void PreviewAndOrRename(bool rename)
+        private void RenameItems()
         {
-            DirectoryInfo di = new DirectoryInfo(FolderSelection);
-            if (di != null)
+            foreach (ItemForRenaming i in ItemsThatCanBeRenamed)
             {
-                Directory.SetCurrentDirectory(FolderSelection);
-                FileInfo[] fi = di.GetFiles();
-                DirectoryInfo[] dii = di.GetDirectories();
-                this.GetItemsToBeRenamed(fi, dii);
-                if (rename)
+                if (i.NeedsRenaming())
                 {
-                    RenameItems(ItemsThatCanBeRenamed);
+                    if (i.IsFile) File.Move(i.OldName, i.NewName);
+                    else Directory.Move(i.OldName, i.NewName);
                 }
-                ProvideResultsFeedback();
-
-            }
-            else
-                Results = "Cannot find path.";
-        }
-
-        private void RenameItems(List<ItemForRenaming> items)
-        {
-            foreach (ItemForRenaming i in items)
-            {
-                if (i.IsFile) File.Move(i.OldName, i.NewName);
-                else Directory.Move(i.OldName, i.NewName);
             }
         }
 
@@ -137,6 +134,7 @@ namespace RenamerUtility
                 sb.Append(Environment.NewLine);
                 sb.Append(Environment.NewLine);
                 sb.Append("--- The following items could not be renamed as the renaming would result in duplicate names:");
+                sb.Append(Environment.NewLine);
                 foreach (ItemForRenaming i in ItemsThatCANNOTBeRenamed)
                 {
                     sb.Append(i.ToString());
@@ -146,20 +144,15 @@ namespace RenamerUtility
             this.Results = sb.ToString();
         }
 
-        //private List<ItemForRenaming> ItemsForRenamingWithoutDuplicates(List<ItemForRenaming> input)
-        //{
-
-        //}
-
         #region Properties
         private void InitProperties()
         {
-            this.FolderSelection = @"E:\_test";
-            this.ReplaceWhat = "ao";
-            this.ReplaceWith = "oa";
-            this.RegexPattern = @"[\d]";
+            this.FolderSelection = @"C:\Users\YEVGENIY\Documents\_test";
+            this.ReplaceWhat = "1";
+            this.ReplaceWith = "1";
+            this.RegexPattern = @"\d+";
             this.IncludeFiles = true;
-            this.IncludeDirectories = false;
+            this.IncludeDirectories = true;
             this.UseRegularExpressions = false;
         }
 

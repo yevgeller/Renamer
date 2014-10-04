@@ -39,5 +39,17 @@ namespace RenamerUtility
             }
         }
 
+        private void results_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            System.Windows.Controls.Label l = sender as System.Windows.Controls.Label;
+            double h = l.ActualHeight;
+            double H = this.ActualHeight;
+
+            if(h>120)
+            {
+                this.Height += h - 107;
+            }
+        }
+
     }
 }
