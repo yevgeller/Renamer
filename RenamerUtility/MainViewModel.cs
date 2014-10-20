@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -11,7 +12,7 @@ namespace RenamerUtility
 {
     public class MainViewModel : ViewModel
     {
-        //string OLD_NEW_NAME_SEPARATOR = "//";
+        MatchEvaluator selectedMatchEvaluatorMethod;
 
         public MainViewModel()
         {
@@ -19,8 +20,10 @@ namespace RenamerUtility
             InitProperties();
         }
 
+        //main method, true for "go ahead" with renaming, false for just a preview
         private void PreviewAndOrRename(bool rename)
         {
+            Properties.Settings.Default.Save();
             DirectoryInfo di = new DirectoryInfo(FolderSelection);
             if (di != null)
             {
@@ -40,7 +43,7 @@ namespace RenamerUtility
 
         public void GetItemsToBeRenamed(FileInfo[] fi, DirectoryInfo[] di)
         {
-            List<ItemForRenaming> ret = new List<ItemForRenaming>();
+            List<ItemForRenaming> list = new List<ItemForRenaming>();
             if (FolderSelection != null)
             {
                 Directory.SetCurrentDirectory(FolderSelection); //?
@@ -49,49 +52,51 @@ namespace RenamerUtility
                 {
                     foreach (FileInfo f in fi)
                     {
-                        ItemForRenaming ifr = new ItemForRenaming { NewName = f.Name, OldName = f.Name, IsFile = true };
-                        if (UseRegularExpressions)
-                        {
-                            if (Regex.IsMatch(ifr.OldName, RegexPattern))
-                            {
-                                Regex rgx = new Regex(RegexPattern);
-                                ifr.NewName = rgx.Replace(ifr.OldName, ReplaceWith);
-                            }
-                        }
-                        else
-                            ifr.NewName = f.Name.Replace(ReplaceWhat, ReplaceWith);
-
-                        ret.Add(ifr);
+                        list.Add(new ItemForRenaming { NewName = f.Name, OldName = f.Name, IsFile = true });
                     }
                 }
                 if (di.Length > 0 && IncludeDirectories)
                 {
                     foreach (DirectoryInfo dinfo in di)
                     {
-                        ItemForRenaming ifr = new ItemForRenaming { NewName = dinfo.Name, OldName = dinfo.Name, IsFile = false };
-                        if (UseRegularExpressions)
-                        {
-                            if (Regex.IsMatch(ifr.OldName, RegexPattern))
-                            {
-                                Regex rgx = new Regex(RegexPattern);
-                                ifr.NewName = rgx.Replace(ifr.OldName, ReplaceWith);
-                            }
-                        }
-                        else
-                            ifr.NewName = dinfo.Name.Replace(ReplaceWhat, ReplaceWith);
-
-                        ret.Add(ifr);
+                        list.Add(new ItemForRenaming { NewName = dinfo.Name, OldName = dinfo.Name, IsFile = false });
                     }
                 }
             }
-
-            CheckForNamesResultingInDuplicatesAndSetProperties(ret);
-            
+            List<ItemForRenaming> ret = RenamingProcessor.Method1(list, UseRegularExpressions, RegexPattern, ReplaceWhat, ReplaceWith, selectedMatchEvaluatorMethod);
+            CheckForNamesResultingInDuplicatesAndSetProperties(ret);            
         }
+
+        #region MatchEvaluatorTransformations
+
+        //copied from http://msdn.microsoft.com/en-us/library/cft8645c(VS.80).aspx
+        private string MatchTransformation_CapText(Match m)
+        {
+            string x = m.ToString();
+            if (char.IsLower(x[0]))
+                return char.ToUpper(x[0]) + x.Substring(1, x.Length - 1);
+
+            return x;
+        }
+
+        private string MatchTransformation_Prepend(Match m)
+        {
+            return ReplaceWith + m;
+        }
+
+        private string MatchTransformation_Append(Match m)
+        {
+            return m + ReplaceWith;
+        }
+
+        private string MatchTransformation_Remove(Match m)
+        {
+            return string.Empty;
+        }
+        #endregion
 
         private void CheckForNamesResultingInDuplicatesAndSetProperties(List<ItemForRenaming> src)
         {
-            //TODO: check for duplicates here with ENTIRE folder
             List<ItemForRenaming> duplicates = src.GroupBy(x => x.NewName)
                 .Where(a => a.Skip(1).Any())
                 .SelectMany(x => x)
@@ -124,11 +129,48 @@ namespace RenamerUtility
         private void ProvideResultsFeedback()
         {
             StringBuilder sb = new StringBuilder();
-            foreach (ItemForRenaming i in ItemsThatCanBeRenamed)
+            List<ItemForRenaming> willBeRenamed = ItemsThatCanBeRenamed.Where(x => x.OldName.CompareTo(x.NewName) != 0).ToList();
+            List<ItemForRenaming> willNOTBeRenamed = ItemsThatCanBeRenamed.Where(x => x.OldName.CompareTo(x.NewName) == 0).ToList();
+
+            if (willBeRenamed.Count() + willNOTBeRenamed.Count() != ItemsThatCanBeRenamed.Count())
             {
-                sb.Append(i.ToString());
-                sb.Append(Environment.NewLine);
+                foreach (ItemForRenaming i in ItemsThatCanBeRenamed)
+                {
+                    sb.Append(i.ToString());
+                    sb.Append(Environment.NewLine);
+                }
             }
+            else
+            {
+                if (!willBeRenamed.Any())
+                {
+                    sb.Append(Environment.NewLine);
+                    sb.Append("No items will be renamed under current search/replacement criteria.");
+                }
+                else
+                {
+                        sb.Append("Will be changed: ");
+                        sb.Append(Environment.NewLine);
+                        foreach (ItemForRenaming i in willBeRenamed)
+                        {
+                            sb.Append(i.ToString());
+                            sb.Append(Environment.NewLine);
+                        }
+                    
+                    if (willNOTBeRenamed.Any())
+                    {
+                        sb.Append(Environment.NewLine);
+                        sb.Append("Will _NOT_ be changed: ");
+                        sb.Append(Environment.NewLine);
+                        foreach (ItemForRenaming i in willNOTBeRenamed)
+                        {
+                            sb.Append(i.ToString());
+                            sb.Append(Environment.NewLine);
+                        }
+                    }
+                }
+            }
+
             if (this.ItemsThatCANNOTBeRenamed.Any())
             {
                 sb.Append(Environment.NewLine);
@@ -147,17 +189,24 @@ namespace RenamerUtility
         #region Properties
         private void InitProperties()
         {
-            this.FolderSelection = @"C:\Users\YEVGENIY\Documents\_test";
-            this.ReplaceWhat = "1";
-            this.ReplaceWith = "1";
-            this.RegexPattern = @"\d+";
-            this.IncludeFiles = true;
-            this.IncludeDirectories = true;
-            this.UseRegularExpressions = false;
+            this.FolderSelection = Properties.Settings.Default["FolderSelection"].ToString();
+            this.ReplaceWhat = Properties.Settings.Default["ReplaceWhat"].ToString();
+            this.ReplaceWith = Properties.Settings.Default["ReplaceWith"].ToString();
+            this.RegexPattern = Properties.Settings.Default["RegexPattern"].ToString();
+            this.IncludeFiles = Convert.ToBoolean(Properties.Settings.Default["IncludeFiles"]);
+            this.IncludeDirectories = Convert.ToBoolean(Properties.Settings.Default["IncludeDirectories"]);
+            this.UseRegularExpressions =Convert.ToBoolean(Properties.Settings.Default["UseRegularExpressions"]);
+            this.Transformations = new List<string>();
+            this.Transformations.Add("Capitalize All Words");
+            this.Transformations.Add("Prepend characters");
+            this.Transformations.Add("Append characters");
+            this.Transformations.Add("Remove characters");
+            this.SelectedTransformation = this.Transformations[1];
         }
 
         public List<ItemForRenaming> ItemsThatCanBeRenamed { get; set; }
         public List<ItemForRenaming> ItemsThatCANNOTBeRenamed { get; set; }
+        public List<string> Transformations { get; set; }
 
         //the textbox that contains the folder that the program is working with
         private string _folderSelection;
@@ -255,6 +304,37 @@ namespace RenamerUtility
                 OnPropertyChanged("Results");
             }
         }
+
+        private string _selectedTransformation;
+        public string SelectedTransformation
+        {
+            get { return _selectedTransformation; }
+            set
+            {
+                if (_selectedTransformation == value) return;
+                _selectedTransformation = value;
+                OnPropertyChanged("SelectedTransformation");
+                switch (_selectedTransformation.ToLower())
+                {
+                    case "capitalize all words":
+                        selectedMatchEvaluatorMethod = this.MatchTransformation_CapText;
+                        break;
+                    case "prepend characters":
+                        selectedMatchEvaluatorMethod = this.MatchTransformation_Prepend;
+                        break;
+                    case "append characters":
+                        selectedMatchEvaluatorMethod = this.MatchTransformation_Append;
+                        break;
+                    case "remove characters":
+                        selectedMatchEvaluatorMethod = this.MatchTransformation_Remove;
+                        break;
+                    default:
+                        selectedMatchEvaluatorMethod = this.MatchTransformation_CapText;
+                        break;
+                }
+
+            }
+        }      
         #endregion
 
         #region Commands
@@ -311,20 +391,6 @@ namespace RenamerUtility
         public ICommand ClearInputValuesCommand { get { return _clearInputValuesCommand; } }
         private void ClearInputValuesCommandAction(object obj)
         {
-            List<ItemForRenaming> items = new List<ItemForRenaming>{
-                    new ItemForRenaming{ OldName="1", NewName="new", IsFile=true},
-                    new ItemForRenaming{ OldName="2", NewName="new1", IsFile=true},
-                    new ItemForRenaming{ OldName="3", NewName="new2", IsFile=true},
-                    new ItemForRenaming{ OldName="4", NewName="new", IsFile=true},
-                    new ItemForRenaming{ OldName="5", NewName="new", IsFile=true},
-                    new ItemForRenaming{ OldName="6", NewName="new2", IsFile=true},
-                    new ItemForRenaming{ OldName="7", NewName="bb", IsFile=true}
-                                          };
-
-            List<ItemForRenaming> ab = items.GroupBy(x => x.NewName).Where(a => a.Skip(1).Any()).SelectMany(x => x).ToList<ItemForRenaming>();
-
-
-
             ReplaceWhat = string.Empty;
             ReplaceWith = string.Empty;
             FolderSelection = string.Empty;
@@ -335,8 +401,6 @@ namespace RenamerUtility
         {
             return true;
         }
-
-
         #endregion
     }
 }

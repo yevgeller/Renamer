@@ -5,6 +5,7 @@
         xmlns:local="clr-namespace:RenamerUtility">
     <Window.Resources>
         <local:BooleanToVisibilityConverter x:Key="boolToVisConverter" />
+        <local:BooleanToVisibilityConverter_Reverse x:Key="boolToVisConverter_Reverse" />
     </Window.Resources>
     <Grid>
         <Grid>
@@ -19,23 +20,30 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Button x:Name="folderSelector" Content="Select folder..." Click="folderSelector_Click" Margin="3" />
             <TextBox x:Name="folderSelection" Grid.Column="1" Margin="3" Text="{Binding FolderSelection}" />
-            <Label Content="Replace what:" Grid.Row="1" />
-            <TextBox x:Name="replaceWhat" Grid.Column="1" Grid.Row="1" Margin="3"  Text="{Binding ReplaceWhat}" />
-            <Label Content="Replace with:" Grid.Row="2" />
-            <TextBox x:Name="replaceWith" Grid.Row="2" Grid.Column="1" Margin="3" Text="{Binding ReplaceWith}" />
-            <Label Content="Pattern (optional):" Grid.Row="3" Grid.Column="0"  Visibility="Collapsed" />
-            <Button Content="Rename!" x:Name="doItButton" Command="{Binding RenameCommand}" Grid.Row="5" Margin="3" />
-            <StackPanel Orientation="Horizontal" Grid.Row="5" Grid.Column="1" HorizontalAlignment="Right">
-                <Button Content="Preview changes" x:Name="preview" Command="{Binding PreviewChangesCommand}" Margin="3,3,3,0" Height="20" VerticalAlignment="Top" />
-                <Button Content="Clear" x:Name="clearButton" Command="{Binding ClearInputValuesCommand}" Width="50" HorizontalAlignment="Right" Margin="3" />
-            </StackPanel>
-            <Grid Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2">
+            <CheckBox x:Name="includeFiles" Content="Include Files" IsChecked="{Binding IncludeFiles}" Margin="3" Grid.Row="1" />
+            <CheckBox x:Name="includeDirectories" Content="Include Directories" IsChecked="{Binding IncludeDirectories}" Margin="3" Grid.Row="2" />
+            <CheckBox x:Name="useRegex" Content="Use regular expressions"  IsChecked="{Binding UseRegularExpressions}" Margin="3" Grid.Row="3" />
+
+            <Grid Grid.Row="5" Visibility="{Binding UseRegularExpressions, Converter={StaticResource boolToVisConverter_Reverse}}" Grid.ColumnSpan="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Label Content="Replace what:" />
+                <TextBox x:Name="replaceWhat" Margin="3" Grid.Column="1" Text="{Binding ReplaceWhat}"/>
+                <Label Content="Replace with:" Grid.Row="1" />
+                <TextBox Grid.Row="1" Grid.Column="1" Margin="3" Text="{Binding ReplaceWith}" />
+            </Grid>
+            <Grid Grid.Row="4" Visibility="{Binding UseRegularExpressions, Converter={StaticResource boolToVisConverter}}" Grid.ColumnSpan="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -45,20 +53,19 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <CheckBox x:Name="includeFiles" Content="Include Files" IsChecked="{Binding IncludeFiles}" Margin="3" Grid.Row="0" />
-                <CheckBox x:Name="includeDirectories" Content="Include Directories" IsChecked="{Binding IncludeDirectories}" Margin="3" Grid.Row="1" />
-                <CheckBox x:Name="useRegex" Content="Use regular expressions"  Visibility="Collapsed" IsChecked="{Binding UseRegularExpressions}" Margin="3" Grid.Row="2" VerticalAlignment="Center" />
-                <Grid Grid.Column="1" Grid.Row="2" 
-                            Visibility="{Binding UseRegularExpressions, Converter={StaticResource boolToVisConverter}}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Label Content="Pattern: " Margin="3" Grid.Column="0" Grid.Row="0" />
+                <Label Content="Pattern:" />
                 <TextBox x:Name="regexPattern" Text="{Binding RegexPattern}" Margin="3" Grid.Column="1" />
-                </Grid>
+                <Label Content="Method:" Grid.Row="1" />
+                <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Transformations}" SelectedItem="{Binding SelectedTransformation}" Margin="3" />
+                <Label Content="Replace with:" Grid.Row="2" />
+                <TextBox Grid.Row="2" Grid.Column="2" Margin="3" Text="{Binding ReplaceWith}" />
             </Grid>
-            <ScrollViewer Grid.Row="6" Grid.ColumnSpan="2">
+            <Button Content="Rename!" x:Name="doItButton" Command="{Binding RenameCommand}" Grid.Row="6" Margin="3" />
+            <StackPanel Orientation="Horizontal" Grid.Row="6" Grid.Column="1" HorizontalAlignment="Right">
+                <Button Content="Preview changes" x:Name="preview" Command="{Binding PreviewChangesCommand}" Margin="3,3,3,0" Height="20" VerticalAlignment="Top" />
+                <Button Content="Clear" x:Name="clearButton" Command="{Binding ClearInputValuesCommand}" Width="50" HorizontalAlignment="Right" Margin="3" />
+            </StackPanel>
+            <ScrollViewer Grid.Row="7" Grid.ColumnSpan="2">
                 <Label x:Name="results" Content="{Binding Results}" SizeChanged="results_SizeChanged" />
             </ScrollViewer>
         </Grid>

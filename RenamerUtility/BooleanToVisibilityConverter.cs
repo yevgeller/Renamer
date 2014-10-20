@@ -32,37 +32,23 @@ namespace RenamerUtility
         }
     }
 
-    public class ShowLongAnswerConverter : IValueConverter
+   public class BooleanToVisibilityConverter_Reverse : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if ((bool)value == true)
+            bool result = (bool)value;
+
+            if (result==false)
                 return Visibility.Visible;
 
             return Visibility.Collapsed;
+            //return System.Convert.ToBoolean(value) ? Visibility.Visible : Visibility.Collapsed;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            throw new NotImplementedException();
+            return value.Equals(Visibility.Visible);
         }
     }
-
-    public class HideLongAnswerConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            if ((bool)value == false)
-                return Visibility.Visible;
-
-            return Visibility.Collapsed;
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
 
 }

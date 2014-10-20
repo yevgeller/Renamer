@@ -41,14 +41,18 @@ namespace RenamerUtility
 
         private void results_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            System.Windows.Controls.Label l = sender as System.Windows.Controls.Label;
-            double h = l.ActualHeight;
-            double H = this.ActualHeight;
-
-            if(h>120)
+            try
             {
-                this.Height += h - 107;
+                double halfHeight = System.Windows.SystemParameters.PrimaryScreenHeight / 2;
+
+                double H = this.ActualHeight;
+
+                if (halfHeight > this.ActualHeight)
+                {
+                    this.Height = halfHeight;
+                }
             }
+            catch{}
         }
 
     }
